@@ -114,12 +114,23 @@ nav:
           - Chaîne de confiance & PKI: certificats/notions/03-chaine-de-confiance-pki.md
           - Handshake TLS: certificats/notions/04-tls-handshake.md
           - ACME & Let's Encrypt: certificats/notions/05-acme-letsencrypt.md
+          - Formats de certificats (PEM, DER, PKCS#12): certificats/notions/06-formats-cert-pem-der-pkcs12.md
+          - SAN et wildcards (approfondi): certificats/notions/07-san-et-wildcards.md
+          - Révocation (CRL, OCSP, 2026): certificats/notions/08-revocation-crl-ocsp.md
+          - mTLS — authentification mutuelle: certificats/notions/09-mtls.md
       - Méthodes:
           - Générer un cert auto-signé (OpenSSL): certificats/methodes/openssl-generer-cert-autosigne.md
           - Créer une CA interne (OpenSSL): certificats/methodes/openssl-creer-ca-interne.md
+          - Émettre un cert via sa CA interne (OpenSSL): certificats/methodes/openssl-emettre-cert-via-ca-interne.md
+          - Inspecter et valider un cert (OpenSSL): certificats/methodes/openssl-inspecter-valider-cert.md
+          - Convertir un cert entre formats (OpenSSL): certificats/methodes/openssl-convertir-formats-cert.md
           - Ajouter une CA au trust store Linux: certificats/methodes/linux-ajouter-ca-au-trust-store.md
+          - Trust stores Windows / macOS / mobile: certificats/methodes/trust-store-windows-macos-mobile.md
           - Traefik + Let's Encrypt (DNS challenge): certificats/methodes/traefik-letsencrypt-dns-challenge.md
+          - Traefik + Let's Encrypt (HTTP challenge): certificats/methodes/traefik-letsencrypt-http-challenge.md
           - Traefik certificat statique (fileProvider): certificats/methodes/traefik-certificat-statique.md
+          - Traefik mTLS: certificats/methodes/traefik-mtls.md
+          - Forcer le renouvellement d'un cert Traefik: certificats/methodes/traefik-forcer-renouvellement.md
           - Diagnostiquer un acme.json cassé: certificats/methodes/traefik-debug-acme-json.md
   - Reverse proxy:
       - reverse-proxy/index.md
