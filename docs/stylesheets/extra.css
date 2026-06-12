@@ -1,0 +1,29 @@
+/* Largeur de contenu un peu plus généreuse sur grands écrans */
+.md-grid {
+  max-width: 1400px;
+}
+
+/* Tableaux plus lisibles */
+.md-typeset table:not([class]) {
+  font-size: 0.78rem;
+}
+
+/* Blocs de code : un poil plus de respiration */
+.md-typeset pre > code {
+  padding: 0.9em 1em;
+}
+
+/* Headers de fiches : meta info (le `>` blockquote initial) plus discret */
+.md-typeset blockquote:first-of-type {
+  border-left: none;
+  background-color: var(--md-default-fg-color--lightest);
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Code inline plus visible */
+.md-typeset code {
+  font-weight: 500;
+}

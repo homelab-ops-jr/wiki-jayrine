@@ -1,0 +1,126 @@
+site_name: Wiki — Administration Réseau
+site_description: Base de connaissance pour la formation en administration réseau (homelab, self-hosting)
+site_author: Pezd
+site_url: https://wiki.jayrine.com/
+
+# Repo lié pour les liens "Edit this page" (optionnel — adapte ou retire si tu veux pas exposer le repo)
+# repo_url: https://git.jayrine.com/pezd/homelab-infra
+# repo_name: homelab-infra
+# edit_uri: _edit/main/stacks/wiki/docs/
+
+theme:
+  name: material
+  language: fr
+  features:
+    - navigation.instant       # transitions sans full reload
+    - navigation.instant.progress
+    - navigation.tracking      # URL suit la section active
+    - navigation.tabs          # onglets en haut pour les sujets de premier niveau
+    - navigation.tabs.sticky
+    - navigation.sections      # sections développées dans la sidebar
+    - navigation.expand
+    - navigation.indexes       # les index.md servent d'index de section
+    - navigation.top           # bouton "remonter en haut"
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy        # bouton copier sur les blocs de code
+    - content.code.annotate
+    - content.tooltips
+    - toc.follow               # sommaire à droite suit le scroll
+  palette:
+    # Mode clair
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Passer en mode sombre
+    # Mode sombre
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Passer en mode clair
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/git-alt
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  # Admonitions (!!! note, !!! warning, etc.)
+  - admonition
+  - pymdownx.details
+  # Blocs de code améliorés
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      use_pygments: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  # Tabs et listes
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  # Formatage texte
+  - pymdownx.tilde       # ~~strikethrough~~ et ~subscript~
+  - pymdownx.caret       # ^superscript^
+  - pymdownx.mark        # ==highlight==
+  - pymdownx.keys        # ++ctrl+c++ pour les raccourcis clavier
+  # Emojis Material
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  # Markdown standards
+  - tables
+  - footnotes
+  - attr_list
+  - md_in_html
+  - def_list
+  - abbr
+  - toc:
+      permalink: ¶
+      title: Sur cette page
+      permalink_title: Lien permanent
+      toc_depth: 3
+
+plugins:
+  - search:
+      lang:
+        - fr
+        - en
+
+nav:
+  - Accueil: index.md
+  - Certificats:
+      - certificats/index.md
+      - Notions:
+          - Cryptographie asymétrique: certificats/notions/01-cryptographie-asymetrique.md
+          - Certificats X.509: certificats/notions/02-certificats-x509.md
+          - Chaîne de confiance & PKI: certificats/notions/03-chaine-de-confiance-pki.md
+          - Handshake TLS: certificats/notions/04-tls-handshake.md
+          - ACME & Let's Encrypt: certificats/notions/05-acme-letsencrypt.md
+      - Méthodes:
+          - Générer un cert auto-signé (OpenSSL): certificats/methodes/openssl-generer-cert-autosigne.md
+          - Créer une CA interne (OpenSSL): certificats/methodes/openssl-creer-ca-interne.md
+          - Ajouter une CA au trust store Linux: certificats/methodes/linux-ajouter-ca-au-trust-store.md
+          - Traefik + Let's Encrypt (DNS challenge): certificats/methodes/traefik-letsencrypt-dns-challenge.md
+          - Traefik certificat statique (fileProvider): certificats/methodes/traefik-certificat-statique.md
+          - Diagnostiquer un acme.json cassé: certificats/methodes/traefik-debug-acme-json.md
+
+extra:
+  generator: false  # retire le "Made with Material for MkDocs" du footer (cosmétique)

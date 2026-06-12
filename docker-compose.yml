@@ -1,0 +1,26 @@
+services:
+  wiki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homelab/wiki:latest
+    container_name: wiki
+    restart: unless-stopped
+    networks:
+      - proxy-tier
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy-tier"
+      # Router
+      - "traefik.http.routers.wiki.rule=Host(`wiki.jayrine.com`)"
+      - "traefik.http.routers.wiki.entrypoints=websecure"
+      - "traefik.http.routers.wiki.tls=true"
+      - "traefik.http.routers.wiki.tls.certresolver=myresolver"
+      # Service (nginx-unprivileged écoute sur 8080)
+      - "traefik.http.services.wiki.loadbalancer.server.port=8080"
+      # OPTIONNEL : décommenter pour protéger le wiki derrière Authelia
+      # - "traefik.http.routers.wiki.middlewares=authelia@docker"
+
+networks:
+  proxy-tier:
+    external: true
