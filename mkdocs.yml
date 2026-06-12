@@ -121,6 +121,21 @@ nav:
           - Traefik + Let's Encrypt (DNS challenge): certificats/methodes/traefik-letsencrypt-dns-challenge.md
           - Traefik certificat statique (fileProvider): certificats/methodes/traefik-certificat-statique.md
           - Diagnostiquer un acme.json cassé: certificats/methodes/traefik-debug-acme-json.md
+  - Reverse proxy:
+      - reverse-proxy/index.md
+      - Notions:
+          - Anatomie d'une requête dans Traefik: reverse-proxy/notions/01-anatomie-requete-traefik.md
+          - Providers statiques vs dynamiques: reverse-proxy/notions/02-providers-static-dynamic.md
+          - Middlewares — concept et chaînage: reverse-proxy/notions/03-middlewares.md
+          - Service discovery & labels Docker: reverse-proxy/notions/04-service-discovery-labels.md
+          - Headers HTTP et X-Forwarded-*: reverse-proxy/notions/05-headers-x-forwarded.md
+      - Méthodes:
+          - Forward auth avec Authelia: reverse-proxy/methodes/traefik-forward-auth-authelia.md
+          - Rate limiting: reverse-proxy/methodes/traefik-rate-limiting.md
+          - Headers de sécurité (HSTS, CSP…): reverse-proxy/methodes/traefik-headers-securite.md
+          - Redirections (HTTP→HTTPS, www, paths): reverse-proxy/methodes/traefik-redirections.md
+          - Diagnostiquer un router ou middleware: reverse-proxy/methodes/traefik-debug-router-middleware.md
+          - Sécuriser le dashboard Traefik: reverse-proxy/methodes/traefik-dashboard-securise.md
 
 extra:
   generator: false  # retire le "Made with Material for MkDocs" du footer (cosmétique)

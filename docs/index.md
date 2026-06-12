@@ -19,7 +19,7 @@ Chaque fiche est autonome et lisible en moins de 10 minutes. Les renvois entre f
 | Sujet | État | Description |
 |-------|------|-------------|
 | [Certificats](./certificats/index.md) | 🟢 En cours | TLS, PKI, Let's Encrypt, mTLS, gestion avec Traefik et OpenSSL |
-| Reverse proxy & routage | ⚪ À venir | Traefik approfondi : middlewares, load balancing, headers, sécurité |
+| [Reverse proxy & routage](./reverse-proxy/index.md) | 🟢 En cours | Traefik approfondi : middlewares, headers, auth, rate limiting, debug |
 | DNS | ⚪ Planifié | Zones, enregistrements, DNS challenge, DNS over TLS |
 | Firewall & sécurité réseau | ⚪ Planifié | UFW, iptables, nftables, CrowdSec, fail2ban |
 | VPN & accès distant | ⚪ Planifié | Tailscale, WireGuard, OpenVPN, exposition de services |
