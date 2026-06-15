@@ -147,6 +147,29 @@ nav:
           - Redirections (HTTP→HTTPS, www, paths): reverse-proxy/methodes/traefik-redirections.md
           - Diagnostiquer un router ou middleware: reverse-proxy/methodes/traefik-debug-router-middleware.md
           - Sécuriser le dashboard Traefik: reverse-proxy/methodes/traefik-dashboard-securise.md
+  - Réseau:
+      - reseau/index.md
+      - Notions:
+          - Modèle OSI et TCP/IP: reseau/notions/01-modele-osi-tcpip.md
+          - Switching L2 (MAC, ARP, broadcast domain): reseau/notions/02-switching-l2-mac-arp.md
+          - VLANs et 802.1Q: reseau/notions/03-vlans-et-802-1q.md
+          - Routage L3 et inter-VLAN: reseau/notions/04-routage-l3-inter-vlan.md
+          - DHCP: reseau/notions/05-dhcp.md
+          - NAT (SNAT, DNAT, port forwarding): reseau/notions/06-nat-snat-dnat.md
+          - Pare-feu stateful: reseau/notions/07-pare-feu-stateful.md
+          - Architecture segmentée (DMZ, defense in depth): reseau/notions/08-architecture-segmentee.md
+          - Outils de diagnostic réseau: reseau/notions/09-outils-diagnostic.md
+  - Virtualisation:
+      - virtualisation/index.md
+      - Notions:
+          - Hyperviseurs (type 1 vs 2): virtualisation/notions/01-hyperviseurs.md
+          - KVM, QEMU, libvirt: virtualisation/notions/02-kvm-qemu-libvirt.md
+          - Disques virtuels: virtualisation/notions/03-disques-virtuels.md
+          - Réseau virtuel (bridges, virtio, tap): virtualisation/notions/04-reseau-virtuel.md
+          - VLANs dans la virtualisation: virtualisation/notions/05-vlans-virtualisation.md
+          - VMs vs conteneurs (KVM, LXC, Docker): virtualisation/notions/06-vms-vs-containers.md
+          - Cloud-init et provisioning: virtualisation/notions/07-cloud-init.md
+          - Haute dispo et clustering: virtualisation/notions/08-haute-dispo-clustering.md
 
 extra:
   generator: false  # retire le "Made with Material for MkDocs" du footer (cosmétique)

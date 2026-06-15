@@ -20,6 +20,8 @@ Chaque fiche est autonome et lisible en moins de 10 minutes. Les renvois entre f
 |-------|------|-------------|
 | [Certificats](./certificats/index.md) | 🟢 En cours | TLS, PKI, Let's Encrypt, mTLS, gestion avec Traefik et OpenSSL |
 | [Reverse proxy & routage](./reverse-proxy/index.md) | 🟢 En cours | Traefik approfondi : middlewares, headers, auth, rate limiting, debug |
+| [Réseau](./reseau/index.md) | 🟢 En cours | OSI/TCP-IP, switching, VLANs, routage, NAT, pare-feu, segmentation, diagnostic |
+| [Virtualisation](./virtualisation/index.md) | 🟢 En cours | Hyperviseurs, KVM/QEMU, disques virtuels, réseau virtuel, VLANs dans Proxmox, conteneurs |
 | DNS | ⚪ Planifié | Zones, enregistrements, DNS challenge, DNS over TLS |
 | Firewall & sécurité réseau | ⚪ Planifié | UFW, iptables, nftables, CrowdSec, fail2ban |
 | VPN & accès distant | ⚪ Planifié | Tailscale, WireGuard, OpenVPN, exposition de services |
@@ -29,6 +31,6 @@ Chaque fiche est autonome et lisible en moins de 10 minutes. Les renvois entre f
 
 - **Commandes shell** : présentées dans des blocs `bash` directement copiables.
 - **Chemins d'exemple** : `/data/services/<stack>/` pour ce qui touche au homelab, `/tmp/demo/` pour les exemples isolés.
-- **Domaines d'exemple** : `example.com` pour les fiches génériques, `jayrine.com` quand un détail propre au homelab est nécessaire.
+- **Domaines d'exemple** : `example.com` pour les fiches génériques.
 - **Mises en garde** : préfixées par `⚠️` (piège fréquent) ou `🔒` (implication sécurité).
 - **Astuces** : préfixées par `💡`.
