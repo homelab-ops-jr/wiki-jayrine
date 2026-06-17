@@ -170,6 +170,8 @@ nav:
           - VMs vs conteneurs (KVM, LXC, Docker): virtualisation/notions/06-vms-vs-containers.md
           - Cloud-init et provisioning: virtualisation/notions/07-cloud-init.md
           - Haute dispo et clustering: virtualisation/notions/08-haute-dispo-clustering.md
+  - Méta:
+         - Convention des cartes d'entraînement: _meta/convention-cartes.md
 
 extra:
   generator: false  # retire le "Made with Material for MkDocs" du footer (cosmétique)
