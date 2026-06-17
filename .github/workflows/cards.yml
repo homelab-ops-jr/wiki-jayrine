@@ -1,0 +1,64 @@
+name: Build and sync Anki cards
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'scripts/build-cards.py'
+      - 'scripts/sync-cards.py'
+      - 'scripts/requirements.txt'
+      - '.github/workflows/cards.yml'
+  workflow_dispatch:  # Permet aussi un déclenchement manuel depuis l'UI GitHub
+
+# Annule un run en cours si un nouveau commit arrive — évite les sync concurrentes
+concurrency:
+  group: anki-cards
+  cancel-in-progress: false  # on ne cancel pas un sync en cours pour éviter les états partiels
+
+jobs:
+  build-and-sync:
+    name: Build .apkg and sync to Anki server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Build wiki.apkg
+        run: python3 scripts/build-cards.py
+
+      - name: Verify .apkg was produced
+        run: |
+          if [ ! -f wiki.apkg ]; then
+            echo "::error::wiki.apkg n'a pas été généré"
+            exit 1
+          fi
+          ls -lh wiki.apkg
+
+      - name: Sync to Anki server
+        env:
+          ANKI_BOT_PASSWORD: ${{ secrets.ANKI_BOT_PASSWORD }}
+          ANKI_BOT_USER: ankibot
+          ANKI_SYNC_URL: https://sync.jayrine.com/
+        run: python3 scripts/sync-cards.py
+
+      - name: Upload .apkg as artifact (for debug)
+        if: always()  # même en cas d'échec du sync, on garde l'artefact pour debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiki-apkg-${{ github.sha }}
+          path: wiki.apkg
+          retention-days: 7
