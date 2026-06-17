@@ -1,3 +1,4 @@
 genanki>=0.13
 markdown>=3.5
-anki>=24.0
+# Doit matcher exactement la version du serveur de sync (cf. stacks/anki-sync dans homelab-infra)
+anki==25.9.2
