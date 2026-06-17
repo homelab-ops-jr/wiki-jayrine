@@ -157,7 +157,7 @@ Tu liras des termes comme **"firewall de couche 7"**, **"load balancer L4"**, **
 ### Faits & terminologie
 
 ??? question "Combien de couches a le modèle OSI ?"
-    7.
+    7 couches.
 
 ??? question "Combien de couches a le modèle TCP/IP ?"
     4.
