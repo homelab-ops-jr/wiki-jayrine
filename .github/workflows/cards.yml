@@ -10,18 +10,22 @@ on:
       - 'scripts/sync-cards.py'
       - 'scripts/requirements.txt'
       - '.github/workflows/cards.yml'
-  workflow_dispatch:  # Permet aussi un déclenchement manuel depuis l'UI GitHub
+  workflow_dispatch:
 
-# Annule un run en cours si un nouveau commit arrive — évite les sync concurrentes
 concurrency:
   group: anki-cards
-  cancel-in-progress: false  # on ne cancel pas un sync en cours pour éviter les états partiels
+  cancel-in-progress: false
 
 jobs:
   build-and-sync:
     name: Build .apkg and sync to Anki server
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    env:
+      # Force Python en mode unbuffered : garantit que tous les prints
+      # sortent dans les logs au fil de l'eau, même si le script plante.
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout repository
@@ -44,6 +48,7 @@ jobs:
         run: |
           if [ ! -f wiki.apkg ]; then
             echo "::error::wiki.apkg n'a pas été généré"
+            ls -la
             exit 1
           fi
           ls -lh wiki.apkg
@@ -56,7 +61,7 @@ jobs:
         run: python3 scripts/sync-cards.py
 
       - name: Upload .apkg as artifact (for debug)
-        if: always()  # même en cas d'échec du sync, on garde l'artefact pour debug
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wiki-apkg-${{ github.sha }}
