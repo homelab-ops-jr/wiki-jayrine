@@ -200,3 +200,169 @@ Nécessite borne Wi-Fi capable de tagger (Unifi, MikroTik, etc.) et un trunk ver
 - [VLANs en virtualisation](../../virtualisation/notions/05-vlans-virtualisation.md) — Proxmox, bridges VLAN-aware
 - [Switching L2, MAC, ARP](./02-switching-l2-mac-arp.md) — pour comprendre ce qu'un switch fait
 - IEEE 802.1Q (la norme officielle)
+
+## Cartes d'entraînement
+
+### Faits & terminologie
+
+??? question "Que veut dire l'acronyme VLAN ?"
+    **Virtual LAN** — un réseau local virtuel, c'est-à-dire un broadcast domain logique séparé sur un switch manageable.
+
+??? question "Quelle est la plage utilisable des VLAN ID ?"
+    **1 à 4094**.
+    
+    Les valeurs 0 et 4095 sont réservées.
+
+??? question "Sur combien de bits est codé le VLAN ID dans un tag 802.1Q ?"
+    **12 bits**, ce qui donne 4096 valeurs possibles dont 4094 utilisables (0 et 4095 réservés).
+
+??? question "Quels VLAN ID sont réservés et donc non utilisables ?"
+    **0 et 4095**.
+    
+    Le VLAN 0 signale une trame avec QoS taggée mais sans VLAN spécifique (rare, parfois rejeté). Le VLAN 4095 est réservé par convention IEEE pour signifier "tous VLANs".
+
+??? question "Combien d'octets ajoute un tag 802.1Q à une trame Ethernet ?"
+    **4 octets** (2 pour le TPID `0x8100`, 2 pour le TCI).
+
+??? question "Que contient le champ TCI d'un tag 802.1Q ?"
+    Le **TCI** (Tag Control Information) fait 2 octets et contient :
+    
+    - **12 bits de VLAN ID** (1 à 4094 utilisables)
+    - **3 bits de PCP** (Priority Code Point, QoS)
+    - **1 bit de DEI** (Drop Eligible Indicator)
+
+??? question "Que signifie PCP dans un tag 802.1Q ?"
+    **Priority Code Point** — 3 bits de QoS (valeurs 0 à 7) qui indiquent la priorité de la trame pour le traitement en cas de congestion.
+
+??? question "Que signifie DEI dans un tag 802.1Q ?"
+    **Drop Eligible Indicator** — 1 bit qui marque la trame comme prioritairement droppable en cas de congestion.
+
+??? question "Quel VLAN est par défaut sur tous les switches à l'allumage usine ?"
+    Le **VLAN 1**. Tous les ports y sont initialement assignés. À éviter pour la production.
+
+??? question "Qu'est-ce qu'un baby giant frame ?"
+    Une trame Ethernet de **1504 octets** au lieu des 1500 du MTU standard — la différence vient des **4 octets ajoutés par le tag 802.1Q**.
+    
+    Certains switches acceptent ces trames sans broncher (option "baby giant frames"), évitant des problèmes de fragmentation quand on traverse du trafic taggé.
+
+??? question "Qu'est-ce que QinQ (802.1ad) ?"
+    Une extension qui permet d'**imbriquer deux tags 802.1Q** dans une même trame : un VLAN externe (typiquement opérateur) qui contient des VLANs internes (typiquement client).
+    
+    Utilisé par les opérateurs télécom pour transporter le trafic VLAN de plusieurs clients sur leur backbone sans collision d'IDs. Hors scope homelab classique.
+
+??? question "Définition d'un port access ?"
+    Un port qui appartient à **un seul VLAN**. Les trames y circulent **sans tag** — le PC connecté ignore tout des VLANs.
+    
+    Le switch ajoute le tag VLAN à l'entrée du fabric interne, et le retire à la sortie vers un autre port access du même VLAN.
+
+??? question "Définition d'un port trunk ?"
+    Un port qui transporte **plusieurs VLANs simultanément**. Les trames y circulent **taggées 802.1Q** (sauf celles du VLAN natif).
+    
+    L'équipement de l'autre côté doit être VLAN-aware pour lire les tags. Cas typique : liaison switch-à-switch ou switch-à-hyperviseur.
+
+??? question "Que veut dire VLAN-aware ?"
+    Capacité d'un équipement à **comprendre les tags 802.1Q** : lire le VLAN ID d'une trame entrante, ajouter un tag à une trame sortante, et router/filtrer en fonction.
+    
+    Concerne les switches manageables, les bridges Linux configurés en mode VLAN-aware, les hyperviseurs, les bornes Wi-Fi compatibles, etc.
+
+??? question "Qu'est-ce que le VLAN natif sur un trunk ?"
+    Le VLAN dont les trames passent **sans tag** sur un trunk, contrairement aux autres VLANs qui sont taggés 802.1Q.
+    
+    Par défaut, c'est généralement le **VLAN 1**. Le mécanisme existe pour compatibilité avec d'anciens équipements non-VLAN-aware qui se trouveraient sur un trunk.
+
+### Concepts
+
+??? question "Quel problème les VLANs résolvent-ils par rapport à plusieurs switches physiques ?"
+    Avant les VLANs, séparer des réseaux pour des raisons de sécurité ou d'organisation imposait d'**acheter plusieurs switches physiques** — coûteux, rigide, et non évolutif.
+    
+    Les VLANs permettent à un **switch manageable unique** d'héberger plusieurs broadcast domains logiques, chacun se comportant comme un switch indépendant — sur le même matériel. On gagne en coût, en flexibilité (reconfiguration logicielle) et en densité.
+
+??? question "Comment se comporte un access port quand une trame entre et sort du switch ?"
+    Côté PC, le port access est **transparent** : le PC envoie et reçoit des trames Ethernet normales, **sans tag**.
+    
+    À l'**entrée** sur le switch, le fabric interne **ajoute le tag VLAN** correspondant au VLAN configuré sur ce port. À la **sortie** vers un autre port access du même VLAN, le tag est **retiré** avant d'envoyer la trame au PC destinataire.
+
+??? question "Quelle est la différence fondamentale entre un port access et un port trunk ?"
+    Un **port access** appartient à **un seul VLAN** et transmet/reçoit des trames **sans tag** — il est destiné aux machines clientes (PC, imprimante, IoT).
+    
+    Un **port trunk** transporte **plusieurs VLANs** simultanément avec leurs trames **taggées 802.1Q** — il est destiné aux liaisons entre équipements VLAN-aware (switch-à-switch, switch-à-hyperviseur, switch-à-borne Wi-Fi multi-SSID).
+
+??? question "Pourquoi le mécanisme de VLAN natif existe-t-il sur un trunk ?"
+    Pour assurer la **compatibilité avec des équipements anciens non-VLAN-aware** qui se trouveraient sur un trunk : ces équipements ne savent pas lire les tags 802.1Q, donc on leur fait passer les trames du VLAN natif sans tag, comme du trafic Ethernet ordinaire.
+    
+    En pratique moderne, ce mécanisme est surtout une **source de bugs et d'attaques** (VLAN hopping), et les best practices recommandent de l'éviter quand c'est possible.
+
+??? question "Explique le mécanisme précis du VLAN hopping par double tagging."
+    L'attaquant est sur un port access dans le **VLAN natif** d'un trunk en aval. Il forge une trame avec **deux tags 802.1Q empilés** : le tag extérieur correspond au VLAN natif, le tag intérieur au VLAN cible.
+    
+    Quand la trame atteint le trunk, le switch **retire le tag extérieur** (puisque le VLAN natif voyage sans tag sur le trunk). La trame ressort avec le tag intérieur encore en place, et est interprétée comme appartenant au **VLAN cible** par l'équipement suivant.
+    
+    L'attaquant a ainsi sauté d'un VLAN à un autre sans franchir de routeur — d'où le nom "VLAN hopping".
+
+??? question "Pourquoi VLAN (L2) et sous-réseau IP (L3) sont-ils techniquement indépendants ?"
+    Un **VLAN** est un concept de **couche 2** : il segmente les trames Ethernet selon un tag, indépendamment de leur contenu.
+    
+    Un **sous-réseau IP** est un concept de **couche 3** : il définit une plage d'adresses IP et un masque, totalement décorrélés du tagging Ethernet.
+    
+    Rien dans les protocoles n'impose qu'un VLAN corresponde à un sous-réseau précis — on peut techniquement avoir deux sous-réseaux dans le même VLAN, ou un sous-réseau réparti sur deux VLANs (cas tordu à éviter).
+
+??? question "Pourquoi associe-t-on en pratique systématiquement un VLAN à un sous-réseau IP ?"
+    Pour la **lisibilité** et la **simplicité opérationnelle** : VLAN 10 → `10.0.10.0/24`, VLAN 20 → `10.0.20.0/24`, etc.
+    
+    Avantages : un routeur/pare-feu peut filtrer "par interface VLAN", ce qui correspond exactement à "par sous-réseau" — l'équivalence rend les règles de flux beaucoup plus claires. Le diagnostic est aussi simplifié, car connaître l'IP suffit à déduire le VLAN.
+
+??? question "Pourquoi un switch L2 ne fait-il pas circuler le trafic entre VLANs, et qu'est-ce qui le fait ?"
+    Par construction, un switch L2 **n'examine pas les en-têtes IP** — il ne fait que commuter les trames Ethernet selon leur MAC destination et leur tag VLAN. Les VLANs sont donc **étanches** au niveau du switch, c'est même tout l'intérêt de la segmentation.
+    
+    Pour que VLAN 10 parle à VLAN 20, il faut un **routeur** (ou un pare-feu jouant ce rôle, type OPNsense/pfSense) qui a une **interface dans chaque VLAN**, une **IP de gateway dans chaque sous-réseau**, et qui **route les paquets entre les sous-réseaux** selon ses règles. C'est l'**inter-VLAN routing**.
+
+??? question "Comment mapper des SSID Wi-Fi à des VLANs ?"
+    Sur une borne Wi-Fi capable de tagger (Unifi, MikroTik, etc.), chaque **SSID** est associé à un **VLAN ID** dans la configuration de la borne.
+    
+    Les trames émises par les clients du SSID "Invités" sortent vers le switch **taggées VLAN 30** (par exemple), tandis que celles du SSID "Maison" sortent **taggées VLAN 10**. La borne doit être raccordée au switch par un **port trunk** transportant les VLANs concernés.
+    
+    Cas d'usage classique : isoler les invités du LAN interne sans déployer plusieurs bornes physiques.
+
+??? question "Décris le cas typique d'un serveur Proxmox raccordé au switch par un port trunk."
+    **Côté switch** : un port configuré en **trunk** transporte plusieurs VLANs (par exemple 10, 20, 30) vers le serveur, avec leurs trames taggées 802.1Q.
+    
+    **Côté Proxmox** : l'hyperviseur est **VLAN-aware**. Il lit les tags 802.1Q entrants et **présente chaque VLAN comme une interface réseau distincte** aux VMs. Une VM affectée au VLAN 10 voit son interface comme un réseau ordinaire, sans savoir qu'elle est sur un trunk physique.
+    
+    Avantage : un seul câble physique transporte tout le trafic réseau de toutes les VMs, quel que soit leur VLAN.
+
+??? question "Décris le trajet complet d'une trame depuis PC1 (port access VLAN 10) jusqu'à une VM (hébergée sur un hyperviseur connecté au switch par un trunk)."
+    **1.** PC1 envoie une trame Ethernet **sans tag** sur son port access (VLAN 10).
+    
+    **2.** Le switch reçoit la trame, l'**associe au VLAN 10** dans son fabric interne et **ajoute le tag 802.1Q VLAN 10**.
+    
+    **3.** Le switch consulte sa table MAC pour le VLAN 10, trouve la MAC destination (celle de la VM) apprise via le **port trunk** vers l'hyperviseur, et y forwarde la trame **avec son tag** 802.1Q intact.
+    
+    **4.** L'hyperviseur, **VLAN-aware**, reçoit la trame taggée, lit le tag VLAN 10, **retire le tag**, et délivre la trame à la VM via son interface virtuelle connectée au VLAN 10.
+    
+    **5.** La VM voit une trame Ethernet ordinaire, sans savoir qu'elle a voyagé sur un trunk taggé.
+
+### Diagnostic
+
+??? question "Tu branches un PC sur un port trunk par inadvertance — où se retrouve-t-il et pourquoi est-ce dangereux ?"
+    Le PC ne sait pas lire les tags 802.1Q : il ignore les trames taggées et ne voit que celles du **VLAN natif** (qui passent sans tag).
+    
+    Par défaut, le VLAN natif est souvent le **VLAN 1**, qui est aussi fréquemment le VLAN **management** dans les configurations non durcies. L'attaquant qui branche un PC sur un tel port se retrouve donc directement dans le réseau d'administration — accès aux interfaces de gestion des switches, du routeur, etc.
+    
+    C'est pour ça que les best practices recommandent de **ne jamais utiliser le VLAN 1** pour la production ni comme VLAN natif.
+
+??? question "Tu veux que VLAN 10 et VLAN 20 puissent communiquer — quelle est la pièce manquante et comment la configurer ?"
+    Il manque un **routeur** (ou un pare-feu jouant ce rôle, type OPNsense/pfSense). Le switch L2 seul ne fera jamais circuler le trafic entre VLANs — c'est l'inter-VLAN routing.
+    
+    Configuration nécessaire :
+    
+    - Une **interface du routeur dans chaque VLAN** (physique séparée, ou virtuelle via sous-interfaces taggées sur un trunk).
+    - Une **IP de gateway dans chaque sous-réseau** (par exemple `10.0.10.1` et `10.0.20.1`).
+    - Les hôtes des deux VLANs configurés avec **leur gateway respective**.
+    - Des **règles de filtrage** sur le routeur qui autorisent explicitement le flux souhaité (par défaut, on filtre tout et on ouvre au cas par cas).
+
+??? question "Tu veux donner du Wi-Fi à des invités sans qu'ils accèdent au LAN interne — quelle solution VLAN ?"
+    Créer un **VLAN dédié "invités"** (par exemple VLAN 30), avec son propre sous-réseau IP.
+    
+    Sur la borne Wi-Fi capable de tagger, créer un **SSID "Invités"** mappé au VLAN 30. La borne est raccordée au switch par un **port trunk** qui transporte au moins les VLANs interne et invités.
+    
+    Sur le routeur/pare-feu, configurer une **interface dans le VLAN 30** qui sert de gateway, et des **règles** qui autorisent le VLAN 30 à accéder à Internet mais **bloquent tout flux** depuis le VLAN 30 vers les VLANs internes.

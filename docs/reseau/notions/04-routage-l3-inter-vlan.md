@@ -238,3 +238,264 @@ Sur OPNsense/pfSense, c'est automatique — c'est le rôle de la machine.
 - [NAT (SNAT, DNAT)](./06-nat-snat-dnat.md) — sortir vers Internet
 - [Pare-feu stateful](./07-pare-feu-stateful.md) — filtrer aux frontières
 - [Outils de diagnostic](./09-outils-diagnostic.md) — `traceroute`, `ip route`
+
+## Cartes d'entraînement
+
+### Faits & terminologie
+
+??? question "Quelle est la notation décimale pointée équivalente à `/24` ?"
+    `255.255.255.0`.
+
+??? question "Pour le sous-réseau `10.0.10.0/24`, quelles sont l'adresse réseau et l'adresse de broadcast ?"
+    Adresse réseau : `10.0.10.0`. Broadcast : `10.0.10.255`.
+
+??? question "Combien d'adresses sont utilisables dans un `/24`, et lesquelles sont exclues ?"
+    **254** adresses utilisables (`.1` à `.254`).
+    
+    Sont exclues : l'**adresse réseau** (`.0`) et l'**adresse de broadcast** (`.255`) du subnet.
+
+??? question "Que signifie l'acronyme CIDR, et que représente la notation `/24` ?"
+    **Classless Inter-Domain Routing** — méthode de notation des sous-réseaux IP qui remplace les anciennes classes A/B/C en permettant un préfixe de longueur variable.
+    
+    La notation `/N` indique que les **N premiers bits** de l'adresse identifient le réseau, et les bits restants identifient l'hôte. Pour `/24` : 24 bits de réseau, 8 bits d'hôte → équivalent à `255.255.255.0` → 256 adresses dont 254 utilisables.
+    
+    CIDR a remplacé le système des classes (qui imposait des tailles fixes : /8, /16, /24) en permettant n'importe quelle taille de subnet — ce qui économise massivement l'espace d'adressage IPv4.
+
+??? question "Comment s'écrit la route par défaut en notation CIDR ?"
+    `0.0.0.0/0` — un préfixe de longueur 0 qui matche **toutes** les adresses IP possibles. C'est la route de dernier recours.
+
+??? question "Que signifie l'acronyme SVI ?"
+    **Switched Virtual Interface** — interface virtuelle sur un switch L3 qui sert de **gateway IP** pour un VLAN. Elle porte l'adresse IP que les hôtes du VLAN utilisent comme default gateway.
+
+??? function "Cite les 4 protocoles de routage dynamique mentionnés et leur usage."
+    - **RIP** : ancien, vector distance, peu utilisé aujourd'hui.
+    - **OSPF** : link state, standard en entreprise.
+    - **BGP** : entre opérateurs Internet, et de plus en plus en datacenter.
+    - **EIGRP** : propriétaire Cisco.
+
+??? question "Quel protocole de routage dynamique est le standard en entreprise ?"
+    **OSPF** (Open Shortest Path First), un protocole de type link state.
+
+??? question "Quel protocole de routage est utilisé entre opérateurs Internet ?"
+    **BGP** (Border Gateway Protocol). Il est aussi de plus en plus utilisé en datacenter.
+
+??? question "Qu'est-ce que le multinetting (ou secondary IP) ?"
+    Configuration où **plusieurs subnets cohabitent sur la même interface physique**, sans VLAN pour les séparer.
+    
+    Techniquement possible, mais déconseillé — préférer la règle **un VLAN par subnet, un subnet par VLAN** pour la clarté et la sécurité.
+
+### Concepts
+
+??? question "Pourquoi une machine ne peut-elle envoyer directement en Ethernet que dans son propre segment ?"
+    Parce que la **couche 2 (Ethernet) n'a de portée que sur le segment local** : une trame est commutée selon des MACs, qui ne sont valides que dans le broadcast domain courant.
+    
+    Pour joindre une IP en dehors du subnet local, la machine doit donc **déléguer à un routeur** : elle envoie la trame à la MAC de sa **default gateway**, et c'est le routeur qui se charge de transmettre le paquet IP vers le subnet de destination, en reconstruisant une nouvelle trame Ethernet adaptée au segment de sortie.
+
+??? question "Qu'est-ce qu'une table de routage, et comment se lit une entrée typique sous Linux ?"
+    Une **table de routage** est la liste des routes connues d'une machine. Chaque entrée dit : « pour atteindre tel sous-réseau, sors par telle interface, éventuellement via telle gateway ».
+    
+    Exemple :
+    
+    ​```
+    default via 10.0.10.1 dev eth0
+    10.0.10.0/24 dev eth0 proto kernel scope link src 10.0.10.50
+    ​```
+    
+    Lecture :
+    
+    - `default via 10.0.10.1 dev eth0` : pour **tout ce que la table ne couvre pas explicitement**, envoyer à `10.0.10.1` via `eth0`.
+    - `10.0.10.0/24 dev eth0` : pour le subnet local, **sortie directe** sur `eth0`, pas besoin de gateway.
+
+??? question "Qu'est-ce que la default gateway, et que se passe-t-il sans elle ?"
+    La **default gateway** est la route `0.0.0.0/0` — l'adresse à utiliser quand **aucune route plus spécifique ne matche** dans la table de routage. C'est ce qui permet de joindre tout ce qui n'est pas dans le subnet local, et en particulier Internet.
+    
+    **Sans default gateway configurée**, la machine ne peut joindre **que son propre subnet local**. Tout autre destination renverra une erreur "Network unreachable" parce qu'il n'y a littéralement aucune route correspondante.
+
+??? question "Explique le principe du longest prefix match avec un exemple."
+    Quand **plusieurs routes matchent** une IP destination, c'est la route avec le **préfixe le plus spécifique** (le plus long) qui gagne.
+    
+    Exemple, pour joindre `10.0.20.50` avec la table :
+    
+    ​```
+    10.0.0.0/8     via 192.168.1.1
+    10.0.20.0/24   via 192.168.1.2
+    default        via 192.168.1.254
+    ​```
+    
+    - `10.0.0.0/8` matche (8 bits de préfixe)
+    - `10.0.20.0/24` matche aussi (24 bits)
+    - `default` matche (0 bits)
+    
+    La route `/24` gagne car c'est la plus spécifique. C'est ce mécanisme qui permet d'avoir une default route large **et** des routes plus précises pour des cas particuliers.
+
+??? question "Décris les 7 étapes que fait un routeur quand un paquet arrive sur une interface."
+    1. **Reçoit la trame Ethernet** sur une interface.
+    2. **Retire l'en-tête Ethernet** (la trame est désencapsulée).
+    3. **Examine l'IP destinataire** du paquet IP.
+    4. **Consulte sa table de routage** pour décider de l'interface de sortie et du prochain saut.
+    5. **Décrémente le TTL** — si TTL = 0, jette le paquet et renvoie un ICMP `Time exceeded` à la source.
+    6. **Construit une nouvelle trame Ethernet** avec MAC source = son interface de sortie, MAC destination = MAC du prochain saut (résolue par **ARP** si pas en cache).
+    7. **Envoie la nouvelle trame** par l'interface de sortie.
+    
+    À chaque saut, la trame Ethernet est **reconstruite intégralement**, mais le paquet IP reste **le même** (sauf TTL décrémenté).
+
+??? question "Qu'est-ce que le router-on-a-stick ?"
+    Architecture inter-VLAN où un routeur a **un seul lien physique** vers le switch, configuré en **port trunk**, et utilise des **sous-interfaces logiques** (une par VLAN) pour porter une IP de gateway dans chaque VLAN.
+    
+    Exemple :
+    
+    ​```
+    eth0       (trunk, sans IP)
+      ├── eth0.10  (IP 10.0.10.1, VLAN 10)
+      ├── eth0.20  (IP 10.0.20.1, VLAN 20)
+      └── eth0.30  (IP 10.0.30.1, VLAN 30)
+    ​```
+    
+    **Avantage** : un seul câble physique.  
+    **Inconvénient** : bande passante partagée entre tous les VLANs.
+
+??? question "Quelle est la différence entre un switch L3 et un routeur traditionnel pour faire de l'inter-VLAN routing ?"
+    Un **switch L3 (multilayer)** sait **router en interne** entre ses propres VLANs, sans avoir besoin d'un routeur externe. Le routage se fait en **commutation matérielle**, ce qui donne des performances maximales.
+    
+    Inconvénients : matériel **plus cher**, options de **filtrage applicatif plus limitées** que sur un pare-feu logiciel. Pas le choix typique pour un homelab, qui préfère un pare-feu logiciel (OPNsense/pfSense) pour la flexibilité des règles.
+
+??? question "Comment OPNsense/pfSense fait-il de l'inter-VLAN routing sur Proxmox en pratique ?"
+    L'hyperviseur Proxmox héberge la VM pare-feu et lui présente **N vNICs**, chacune **taggée d'un VLAN** dans la configuration du bridge VLAN-aware.
+    
+    Côté OPNsense/pfSense, ces N vNICs apparaissent comme **N interfaces séparées**, chacune dans un VLAN, chacune portant une IP de gateway dans le sous-réseau correspondant. Le pare-feu route et filtre entre ces interfaces selon ses règles.
+    
+    C'est techniquement du **router-on-a-stick** côté implémentation (un seul lien physique trunk vers le switch en amont), mais présenté à l'admin comme du multi-interface classique.
+
+??? question "Pourquoi le pare-feu doit-il autoriser le trafic dans les deux directions, et qu'est-ce qui sauve un firewall stateful ?"
+    Quand A (VLAN 10) parle à B (VLAN 20), **deux flux** traversent le routeur : le trafic **aller** (`A → routeur → B`) et le trafic **retour** (`B → routeur → A`). Les deux doivent être autorisés pour que la communication fonctionne.
+    
+    **Piège classique** : tu écris une règle "VLAN 10 → VLAN 20 autorisé" sans rien pour le retour. Sans état, la réponse de B est bloquée et la connexion ne s'établit jamais.
+    
+    Un **pare-feu stateful** (comme OPNsense ou pfSense par défaut) suit l'état des connexions : dès qu'une session est autorisée dans un sens, le **trafic retour est implicitement autorisé** tant que la session est active. Pas besoin d'écrire la règle inverse.
+
+??? question "Qu'est-ce qu'une SVI sur un switch L3, et quel est son équivalent sur un routeur classique ou un pare-feu ?"
+    Une **SVI** (Switched Virtual Interface) est une interface virtuelle sur un switch L3 qui sert de **gateway IP** pour un VLAN. Quand on configure `interface Vlan10 ; ip address 10.0.10.1/24`, on crée une SVI.
+    
+    L'équivalent sur un **routeur classique** ou un **pare-feu** est la **sous-interface VLAN** (ex. `eth0.10`) ou l'**interface VLAN logique** dans la GUI d'OPNsense/pfSense.
+    
+    Concept clé commun : l'**IP de gateway** d'un sous-réseau est portée par une **interface logique** (SVI ou sous-interface), pas par le switch ou le routeur en tant que tel.
+
+??? question "Routes statiques vs routes dynamiques : différence et cas d'usage."
+    **Statiques** : on écrit **manuellement** chaque route. Convient aux topologies **petites et stables** — un homelab typique a quelques routes statiques (essentiellement la default) et n'a plus rien à toucher.
+    
+    **Dynamiques** : des **protocoles de routage** (OSPF, BGP, RIP, EIGRP) **échangent les routes automatiquement** entre routeurs. Indispensable en entreprise ou chez les opérateurs où la topologie évolue et où il y a beaucoup de routeurs interconnectés. Hors scope homelab classique.
+
+??? question "Pourquoi Linux ne route pas par défaut, et comment l'activer ?"
+    Par défaut, un noyau Linux **ne forwarde pas** les paquets entre interfaces : si un paquet arrive sur `eth0` et n'est pas destiné à la machine, il est **jeté**. C'est un choix de sécurité — la grande majorité des machines Linux sont des end-hosts, pas des routeurs.
+    
+    Pour activer le forwarding :
+    
+    ​```bash
+    sudo sysctl -w net.ipv4.ip_forward=1
+    sudo sysctl -w net.ipv6.conf.all.forwarding=1
+    ​```
+    
+    Pour rendre persistant, ajouter dans `/etc/sysctl.conf` ou un fichier dans `/etc/sysctl.d/` :
+    
+    ​```
+    net.ipv4.ip_forward = 1
+    net.ipv6.conf.all.forwarding = 1
+    ​```
+    
+    Sur OPNsense/pfSense, c'est **automatique** — c'est leur rôle.
+
+??? question "Décris le parcours complet d'un paquet de A (`10.0.10.50`, VLAN 10) vers B (`10.0.20.50`, VLAN 20) à travers un router-on-a-stick."
+    **1. A constate que B n'est pas dans son subnet** (`10.0.20.50` ∉ `10.0.10.0/24`) → A doit passer par sa **default gateway** `10.0.10.1`.
+    
+    **2. A fait un ARP** pour `10.0.10.1` (s'il n'a pas déjà la MAC en cache), puis envoie une trame Ethernet `src=MAC-A, dst=MAC-routeur` contenant un paquet IP `src=10.0.10.50, dst=10.0.20.50`.
+    
+    **3. Le switch** commute cette trame dans le VLAN 10, l'envoie taggée VLAN 10 sur le port trunk vers le routeur.
+    
+    **4. Le routeur** reçoit la trame sur sa sous-interface `eth0.10`, retire l'en-tête Ethernet, examine l'IP dest `10.0.20.50`, **consulte sa table de routage** qui dit "`10.0.20.0/24` est directement connecté via `eth0.20`", **décrémente le TTL**.
+    
+    **5. Le routeur fait un ARP** pour `10.0.20.50` (via `eth0.20`) si nécessaire, puis **construit une nouvelle trame** `src=MAC-routeur-VLAN20, dst=MAC-B`, contenant le **même paquet IP** (TTL décrémenté).
+    
+    **6. Cette trame ressort taggée VLAN 20** sur le trunk vers le switch, qui la commute jusqu'à B.
+    
+    **7. B reçoit une trame** apparemment "directe" sur son segment, et répond — le retour suit le chemin inverse, autorisé implicitement par le pare-feu stateful.
+
+### Diagnostic
+
+??? question "Ping vers Internet KO mais ping vers le routeur OK — causes probables ?"
+    La couche 2 et la connectivité locale sont OK (puisque tu joins le routeur), donc le problème est **au-delà du routeur** :
+    
+    - **Default gateway pas en route** sur la machine — vérifier `ip route` côté client.
+    - **Routeur sans NAT** vers Internet — il route bien les paquets mais ils repartent avec une IP privée non routable sur Internet.
+    - **Routeur sans route vers Internet** ou sans connectivité WAN — vérifier la table de routage et les interfaces du routeur lui-même.
+
+??? question "Ping vers une autre VLAN KO depuis une machine — causes possibles ?"
+    - **Pas de route** vers l'autre subnet — la machine n'a pas de default gateway, ou aucune route ne matche.
+    - **Le pare-feu bloque** le flux entre les deux VLANs.
+    - **Gateway mal configurée** côté client (mauvaise IP, ou la gateway n'a pas d'interface dans le VLAN cible).
+    - **IP forwarding désactivé** sur le routeur si c'est un Linux qui doit router (`net.ipv4.ip_forward=0`).
+    
+    Vérifier dans l'ordre : `ip route` côté client, joignabilité de la gateway (`ping <gateway>`), règles du pare-feu, table de routage côté routeur.
+
+??? question "Connexion sortante OK mais réponse pas reçue — qu'est-ce que ça suggère ?"
+    Deux causes principales :
+    
+    - **Pare-feu non stateful** ou règle de retour manquante : la requête passe, mais la réponse est bloquée parce qu'aucune règle explicite ne l'autorise.
+    - **Route asymétrique** : la requête sort par un chemin, la réponse revient par un autre chemin qui ne sait pas (ou refuse) de la traiter — typique quand il y a plusieurs routeurs ou interfaces WAN.
+
+??? question "Erreur 'No route to host' — cause ?"
+    Aucune route correspondante dans la table de routage **et pas de default gateway** qui matche cette destination. La machine sait littéralement où chercher pour rien.
+    
+    Vérifier `ip route` : il manque soit une route spécifique, soit la default route.
+
+??? question "Erreur 'Network unreachable' — cause et différence avec 'No route to host' ?"
+    **Network unreachable** : pas de **default gateway** configurée. La machine peut joindre son subnet local mais rien au-delà — il n'existe aucune route pour atteindre les autres réseaux.
+    
+    **No route to host** : il y a bien une default route ou des routes, mais aucune ne matche cette destination précise (cas plus rare en pratique courante).
+    
+    En homelab, **Network unreachable** est le symptôme typique d'une machine qui a une IP mais pas reçu de gateway via DHCP, ou d'une config statique incomplète.
+
+??? question "Le routeur reçoit les paquets mais ne les transmet pas — quel paramètre vérifier sur Linux ?"
+    L'**IP forwarding** : `net.ipv4.ip_forward` (et `net.ipv6.conf.all.forwarding` pour IPv6).
+    
+    Vérifier l'état actuel :
+    
+    ​```bash
+    sysctl net.ipv4.ip_forward
+    ​```
+    
+    Si la valeur est `0`, le noyau jette les paquets non destinés à la machine elle-même. Activer avec `sysctl -w net.ipv4.ip_forward=1` (temporaire) ou via `/etc/sysctl.d/` (persistant).
+
+??? question "Tu vois des `Time exceeded` ICMP renvoyés au client — qu'est-ce que ça suggère ?"
+    Le **TTL** des paquets atteint **0** avant d'arriver à destination, et un routeur sur le chemin renvoie l'ICMP `Time exceeded` au client.
+    
+    Causes possibles :
+    
+    - **Loop de routage** : deux routeurs avec des default routes croisées se renvoient le paquet à l'infini jusqu'à épuisement du TTL.
+    - **Chemin trop long** (rare en pratique avec un TTL initial de 64 ou 128).
+    - **Usage normal de `traceroute`** : `traceroute` envoie volontairement des paquets avec un TTL faible pour faire répondre chaque routeur du chemin.
+
+### Outils
+
+??? question "Quelle commande pour savoir par où Linux va envoyer un paquet vers une IP précise, avant même de l'envoyer ?"
+    ​```bash
+    ip route get <ip>
+    ​```
+    
+    Exemple : `ip route get 8.8.8.8` → sortie du type `8.8.8.8 via 10.0.10.1 dev eth0 src 10.0.10.50`. Très utile pour vérifier que la default route et le choix d'interface sont conformes à ce qu'on attend, sans avoir à envoyer de paquet réel.
+
+??? question "Quelle commande pour activer l'IP forwarding IPv4 de manière temporaire sur Linux ?"
+    ​```bash
+    sudo sysctl -w net.ipv4.ip_forward=1
+    ​```
+    
+    Pour IPv6 : `sudo sysctl -w net.ipv6.conf.all.forwarding=1`. Le changement est perdu au reboot — pour le rendre persistant, éditer `/etc/sysctl.conf` ou créer un fichier dans `/etc/sysctl.d/`.
+
+??? question "Comment rendre l'IP forwarding persistant sur Linux ?"
+    Ajouter dans `/etc/sysctl.conf` ou dans un fichier dédié sous `/etc/sysctl.d/` (par exemple `/etc/sysctl.d/99-routing.conf`) :
+    
+    ​```
+    net.ipv4.ip_forward = 1
+    net.ipv6.conf.all.forwarding = 1
+    ​```
+    
+    Appliquer immédiatement sans reboot : `sudo sysctl --system` (recharge tous les fichiers sysctl).
