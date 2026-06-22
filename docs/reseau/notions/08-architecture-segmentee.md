@@ -89,7 +89,7 @@ Aucune n'est complète seule. Toutes ensemble couvrent énormément.
 
 ## Modèles d'architecture types
 
-### Modèle "Le Chaudron" (homelab segmenté typique)
+### Modèle (homelab segmenté typique)
 
 ```
                     Internet

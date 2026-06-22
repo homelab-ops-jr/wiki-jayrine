@@ -166,7 +166,7 @@ C'est le concept d'**inter-VLAN routing**, détaillé dans [Routage L3 et inter-
 | Petite entreprise | 5-15 VLANs (mgmt, employés, invités, ToIP, caméras, prod, etc.) |
 | Datacenter | Dizaines à centaines |
 
-Schéma type pour un homelab "Le Chaudron" :
+Schéma type pour un homelab :
 
 ```
 VLAN 10  Management  10.0.10.0/24  Admin Proxmox, OPNsense
